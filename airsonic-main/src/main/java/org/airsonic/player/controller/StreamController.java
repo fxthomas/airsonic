@@ -162,7 +162,7 @@ public class StreamController {
                 // Wrangle response length and ranges.
                 //
                 // Support ranges as long as we're not transcoding; video is always assumed to transcode
-                if (file.isVideo()) {
+                if (file.isVideo() || ! parameters.isRangeAllowed()) {
                     // Use chunked transfer; do not accept range requests
                     response.setStatus(HttpServletResponse.SC_OK);
                     response.setHeader("Accept-Ranges", "none");
