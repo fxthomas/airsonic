@@ -943,15 +943,23 @@ public class SettingsService {
      * @return Possibly empty list of all music folders.
      */
     public List<MusicFolder> getAllMusicFolders(boolean includeDisabled, boolean includeNonExisting) {
+
         if (cachedMusicFolders == null) {
             cachedMusicFolders = musicFolderDao.getAllMusicFolders();
         }
 
         List<MusicFolder> result = new ArrayList<>(cachedMusicFolders.size());
         for (MusicFolder folder : cachedMusicFolders) {
-            if ((includeDisabled || folder.isEnabled()) && (includeNonExisting || FileUtil.exists(folder.getPath()))) {
-                result.add(folder);
+            if (!folder.isEnabled() && !includeDisabled) {
+                LOG.debug("Skipping music folder [{}] (not enabled)", folder.getPath());
+                continue;
             }
+            if (!FileUtil.exists(folder.getPath()) && !includeNonExisting) {
+                LOG.debug("Skipping music folder [{}] (not found)", folder.getPath());
+                continue;
+            }
+            LOG.debug("Found music folder [{}]", folder.getPath());
+            result.add(folder);
         }
         return result;
     }
