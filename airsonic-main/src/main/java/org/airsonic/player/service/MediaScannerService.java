@@ -186,8 +186,11 @@ public class MediaScannerService {
             // Scan podcast folder.
             File podcastFolder = new File(settingsService.getPodcastFolder());
             if (podcastFolder.exists()) {
+                LOG.debug("Found podcast folder [{}]", podcastFolder.getPath());
                 scanFile(mediaFileService.getMediaFile(podcastFolder), new MusicFolder(podcastFolder, null, true, null),
                          statistics, albumCount, genres, true);
+            } else {
+                LOG.debug("Skipping podcast folder [{}] (not found)", podcastFolder.getPath());
             }
 
             LOG.info("Scanned media library with " + scanCount + " entries.");
@@ -200,12 +203,14 @@ public class MediaScannerService {
             albumDao.markNonPresent(statistics.getScanDate());
 
             // Update statistics
+            LOG.debug("Updating statistics");
             statistics.incrementArtists(albumCount.size());
             for (Integer albums : albumCount.values()) {
                 statistics.incrementAlbums(albums);
             }
 
             // Update genres
+            LOG.debug("Updating genres");
             mediaFileDao.updateGenres(genres.getGenres());
 
             LOG.info("Completed media library scan.");
