@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.web.MultipartAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.embedded.ConfigurableEmbeddedServletContainer;
 import org.springframework.boot.context.embedded.EmbeddedServletContainerCustomizer;
-import org.springframework.boot.context.event.ApplicationEnvironmentPreparedEvent;
+import org.springframework.boot.context.event.ApplicationPreparedEvent;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.web.support.SpringBootServletInitializer;
@@ -166,8 +166,10 @@ public class Application extends SpringBootServletInitializer implements Embedde
 
     private static SpringApplicationBuilder doConfigure(SpringApplicationBuilder application) {
         // Handle HSQLDB database upgrades from 1.8 to 2.x before any beans are started.
-        application.application().addListeners((ApplicationListener<ApplicationEnvironmentPreparedEvent>) event -> {
-            LegacyHsqlUtil.upgradeHsqldbDatabaseSafely();
+        application.application().addListeners((ApplicationListener<ApplicationPreparedEvent>) event -> {
+            if (event.getApplicationContext().getEnvironment().acceptsProfiles("legacy")) {
+                LegacyHsqlUtil.upgradeHsqldbDatabaseSafely();
+            }
         });
 
         // Customize the application or call application.sources(...) to add sources
