@@ -23,6 +23,7 @@ import org.airsonic.player.domain.Genre;
 import org.airsonic.player.domain.MediaFile;
 import org.airsonic.player.domain.MusicFolder;
 import org.airsonic.player.domain.RandomSearchCriteria;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlVisitor;
 import org.airsonic.player.util.Util;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -488,6 +489,13 @@ public class MediaFileDao extends AbstractDao {
                           "media_file.folder in (:folders) " +
                           "order by starred_media_file.created desc limit :count offset :offset",
                           rowMapper, args);
+    }
+
+    public List<MediaFile> searchAdvancedSongs(final String username, String query, int count) {
+        AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlVisitor.toSql(username, query);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
     }
 
     public List<MediaFile> getRandomSongs(RandomSearchCriteria criteria, final String username) {

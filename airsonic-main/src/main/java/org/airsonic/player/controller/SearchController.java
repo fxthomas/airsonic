@@ -20,6 +20,7 @@
 package org.airsonic.player.controller;
 
 import org.airsonic.player.command.SearchCommand;
+import org.airsonic.player.dao.MediaFileDao;
 import org.airsonic.player.domain.*;
 import org.airsonic.player.service.PlayerService;
 import org.airsonic.player.service.SearchService;
@@ -27,6 +28,8 @@ import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
 import org.airsonic.player.service.search.IndexType;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -59,6 +62,8 @@ public class SearchController {
     private PlayerService playerService;
     @Autowired
     private SearchService searchService;
+    @Autowired
+    private MediaFileDao mediaFileDao;
 
     @GetMapping
     protected String displayForm() {
@@ -69,6 +74,8 @@ public class SearchController {
     protected void formBackingObject(HttpServletRequest request, Model model) {
         model.addAttribute("command",new SearchCommand());
     }
+
+    private static final Logger LOG = LoggerFactory.getLogger(SearchController.class);
 
     @PostMapping
     protected String onSubmit(HttpServletRequest request, HttpServletResponse response,@ModelAttribute("command") SearchCommand command, Model model)
@@ -84,18 +91,25 @@ public class SearchController {
 
         if (query != null) {
 
-            SearchCriteria criteria = new SearchCriteria();
-            criteria.setCount(MATCH_COUNT);
-            criteria.setQuery(query);
+            if (query.startsWith("=")) {
+                query = query.substring(1);
+                command.setSongs(mediaFileDao.searchAdvancedSongs(user.getUsername(), query, MATCH_COUNT));
+                command.setPlayer(playerService.getPlayer(request, response));
 
-            SearchResult artists = searchService.search(criteria, musicFolders, IndexType.ARTIST);
-            command.setArtists(artists.getMediaFiles());
+            } else {
+                SearchCriteria criteria = new SearchCriteria();
+                criteria.setCount(MATCH_COUNT);
+                criteria.setQuery(query);
 
-            SearchResult albums = searchService.search(criteria, musicFolders, IndexType.ALBUM);
-            command.setAlbums(albums.getMediaFiles());
+                SearchResult artists = searchService.search(criteria, musicFolders, IndexType.ARTIST);
+                command.setArtists(artists.getMediaFiles());
 
-            SearchResult songs = searchService.search(criteria, musicFolders, IndexType.SONG);
-            command.setSongs(songs.getMediaFiles());
+                SearchResult albums = searchService.search(criteria, musicFolders, IndexType.ALBUM);
+                command.setAlbums(albums.getMediaFiles());
+
+                SearchResult songs = searchService.search(criteria, musicFolders, IndexType.SONG);
+                command.setSongs(songs.getMediaFiles());
+            }
 
             command.setPlayer(playerService.getPlayer(request, response));
         }

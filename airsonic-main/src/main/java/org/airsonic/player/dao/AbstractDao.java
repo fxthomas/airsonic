@@ -88,6 +88,15 @@ public class AbstractDao {
         }
     }
 
+    protected <T> List<T> queryWithLimit(String sql, RowMapper<T> rowMapper, List<Object> args, int limit) {
+        long t = System.nanoTime();
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(daoHelper.getDataSource());
+        jdbcTemplate.setMaxRows(limit);
+        List<T> result = jdbcTemplate.query(sql, args.stream().toArray(), rowMapper);
+        log(sql, t);
+        return result;
+    }
+
     protected <T> List<T> query(String sql, RowMapper<T> rowMapper, Object... args) {
         long t = System.nanoTime();
         List<T> result = getJdbcTemplate().query(sql, args, rowMapper);
