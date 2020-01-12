@@ -10,7 +10,7 @@ import java.util.TreeMap;
 
 public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.search.parser.AdvancedSearchQueryBaseVisitor<AdvancedSearchQuerySqlVisitor.SqlWhereClause> {
 
-    private String username;
+    protected String username;
 
     public static class SqlWhereClause {
         private StringBuilder clause;
@@ -58,16 +58,111 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             this.joinArguments.addAll(other.joinArguments);
         }
 
-        public void join(String alias, String expr) {
+        public void addJoin(String alias, String expr) {
             if (this.joins.containsKey(alias) && !this.joins.get(alias).equals(expr)) {
                 throw new RuntimeException("Already joined: " + expr);
             }
             this.joins.put(alias, expr);
         }
 
-        public void join(String alias, String expr, Object argument) {
-            this.join(alias, expr);
+        public void addJoin(String alias, String expr, Object argument) {
+            this.addJoin(alias, expr);
             this.joinArguments.add(argument);
+        }
+
+        public SqlWhereClause and(String expr) {
+            if (this.isWhereClauseEmpty()) this.add(expr);
+            else this.add(" AND " + expr);
+            return this;
+        }
+
+        public SqlWhereClause and(String expr, Object arg) {
+            this.and(expr);
+            this.clauseArguments.add(arg);
+            return this;
+        }
+
+        public SqlWhereClause and(SqlWhereClause other) {
+            if (other.isEmpty()) return this;
+
+            if (!other.isWhereClauseEmpty()) {
+                if (this.isWhereClauseEmpty()) {
+                    this.clause.append(other.clause);
+                } else {
+                    StringBuilder newClause = new StringBuilder();
+                    newClause.append("(");
+                    newClause.append(this.clause);
+                    newClause.append(") AND (");
+                    newClause.append(other.clause);
+                    newClause.append(")");
+                    this.clause = newClause;
+                }
+                this.clauseArguments.addAll(other.clauseArguments);
+            }
+
+            this.joins.putAll(other.joins);
+            this.joinArguments.addAll(other.joinArguments);
+
+            return this;
+        }
+
+        public SqlWhereClause or(String expr) {
+            if (this.isWhereClauseEmpty()) this.add(expr);
+            else this.add(" OR " + expr);
+            return this;
+        }
+
+        public SqlWhereClause or(String expr, Object arg) {
+            this.or(expr);
+            this.clauseArguments.add(arg);
+            return this;
+        }
+
+        public SqlWhereClause or(SqlWhereClause other) {
+            if (other.isEmpty()) return this;
+
+            if (!other.isWhereClauseEmpty()) {
+                if (this.isWhereClauseEmpty()) {
+                    this.clause.append(other.clause);
+                } else {
+                    StringBuilder newClause = new StringBuilder();
+                    newClause.append("(");
+                    newClause.append(this.clause);
+                    newClause.append(") OR (");
+                    newClause.append(other.clause);
+                    newClause.append(")");
+                    this.clause = newClause;
+                }
+                this.clauseArguments.addAll(other.clauseArguments);
+            }
+
+            this.joins.putAll(other.joins);
+            this.joinArguments.addAll(other.joinArguments);
+
+            return this;
+        }
+
+        public SqlWhereClause enclose() {
+            if (!isWhereClauseEmpty() && !(this.clause.charAt(0) == '(') && this.clause.charAt(this.clause.length() - 1) == ')') {
+                StringBuilder newClause = new StringBuilder();
+                newClause.append("(");
+                newClause.append(this.clause);
+                newClause.append(")");
+                this.clause = newClause;
+            }
+            return this;
+        }
+
+        public boolean isWhereClauseEmpty() {
+            return this.clause.length() == 0 && this.clauseArguments.size() == 0;
+        }
+
+        public boolean isJoinClauseEmpty() {
+            return this.joins.size() == 0 && this.joinArguments.size() == 0;
+        }
+
+        public boolean isEmpty() {
+            return this.isWhereClauseEmpty() && this.isJoinClauseEmpty();
         }
 
         public String toString() {
@@ -126,11 +221,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
     @Override
     public SqlWhereClause visitBracketExpression(org.airsonic.player.service.search.parser.AdvancedSearchQueryParser.BracketExpressionContext ctx) {
         if (ctx.expression() == null) throw new RuntimeException("Expected expression in " + ctx.getText());
-        SqlWhereClause clause = new SqlWhereClause();
-        clause.add("(");
-        clause.add(visit(ctx.expression()));
-        clause.add(")");
-        return clause;
+        return visit(ctx.expression()).enclose();
     }
 
     @Override
@@ -313,10 +404,10 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             case "albumrating":
                 sqlField = "user_rating.rating";
                 SqlWhereClause albumRatingClause = handleIntValues(ctx.operator(), sqlField, value);
-                albumRatingClause.join(
+                albumRatingClause.addJoin(
                     "media_album",
-                    "left outer join media_file media_album on media_album.type = 'ALBUM' and media_album.album = media_file.album and media_album.artist = media_file.artist");
-                albumRatingClause.join(
+                    "left outer join media_file media_album on media_album.type = 'ALBUM' and media_album.path = media_file.parent_path");
+                albumRatingClause.addJoin(
                     "user_rating",
                     "left outer join user_rating on user_rating.path = media_album.path and user_rating.username = ?",
                     this.username);
@@ -324,7 +415,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             case "starred":
                 sqlField = "starred_media_file.id";
                 SqlWhereClause starredClause = handleBoolValues(ctx.operator(), sqlField, value);
-                starredClause.join(
+                starredClause.addJoin(
                     "starred_media_file",
                     "left outer join starred_media_file on media_file.id = starred_media_file.media_file_id and starred_media_file.username = ?",
                     this.username);
