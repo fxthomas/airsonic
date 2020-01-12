@@ -23,6 +23,9 @@ import org.airsonic.player.domain.Genre;
 import org.airsonic.player.domain.MediaFile;
 import org.airsonic.player.domain.MusicFolder;
 import org.airsonic.player.domain.RandomSearchCriteria;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlAlbumVisitor;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlArtistVisitor;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlMusicVisitor;
 import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlVisitor;
 import org.airsonic.player.util.Util;
 import org.apache.commons.lang.StringUtils;
@@ -490,8 +493,22 @@ public class MediaFileDao extends AbstractDao {
                           rowMapper, args);
     }
 
+    public List<MediaFile> searchAdvancedAlbums(final String username, String query, int count) {
+        AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlAlbumVisitor.toSql(username, query);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+    }
+
     public List<MediaFile> searchAdvancedSongs(final String username, String query, int count) {
-        AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlVisitor.toSql(username, query);
+        AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlMusicVisitor.toSql(username, query);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+    }
+
+    public List<MediaFile> searchAdvancedArtists(final String username, String query, int count) {
+        AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlArtistVisitor.toSql(username, query);
         String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
         List<Object> args = new ArrayList<>();
         return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);

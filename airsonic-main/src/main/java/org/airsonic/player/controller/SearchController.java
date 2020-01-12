@@ -94,6 +94,8 @@ public class SearchController {
             if (query.startsWith("=")) {
                 query = query.substring(1);
                 command.setSongs(mediaFileDao.searchAdvancedSongs(user.getUsername(), query, MATCH_COUNT));
+                command.setAlbums(mediaFileDao.searchAdvancedAlbums(user.getUsername(), query, MATCH_COUNT));
+                command.setArtists(mediaFileDao.searchAdvancedArtists(user.getUsername(), query, MATCH_COUNT));
                 command.setPlayer(playerService.getPlayer(request, response));
 
             } else {
