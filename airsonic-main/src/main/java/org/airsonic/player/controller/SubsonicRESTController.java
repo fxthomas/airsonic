@@ -713,22 +713,40 @@ public class SubsonicRESTController {
         criteria.setQuery(StringUtils.trimToEmpty(query));
         criteria.setCount(getIntParameter(request, "artistCount", 20));
         criteria.setOffset(getIntParameter(request, "artistOffset", 0));
-        org.airsonic.player.domain.SearchResult artists = searchService.search(criteria, musicFolders, IndexType.ARTIST);
-        for (MediaFile mediaFile : artists.getMediaFiles()) {
+        List<MediaFile> artists;
+        if (query.startsWith("=")) {
+            artists = mediaFileDao.searchAdvancedArtists(username, query.substring(1), criteria.getCount());
+        } else {
+            org.airsonic.player.domain.SearchResult artistsResults = searchService.search(criteria, musicFolders, IndexType.ARTIST);
+            artists = artistsResults.getMediaFiles();
+        }
+        for (MediaFile mediaFile : artists) {
             searchResult.getArtist().add(createJaxbArtist(mediaFile, username));
         }
 
         criteria.setCount(getIntParameter(request, "albumCount", 20));
         criteria.setOffset(getIntParameter(request, "albumOffset", 0));
-        org.airsonic.player.domain.SearchResult albums = searchService.search(criteria, musicFolders, IndexType.ALBUM);
-        for (MediaFile mediaFile : albums.getMediaFiles()) {
+        List<MediaFile> albums;
+        if (query.startsWith("=")) {
+            albums = mediaFileDao.searchAdvancedAlbums(username, query.substring(1), criteria.getCount());
+        } else {
+            org.airsonic.player.domain.SearchResult albumsResults = searchService.search(criteria, musicFolders, IndexType.ALBUM);
+            albums = albumsResults.getMediaFiles();
+        }
+        for (MediaFile mediaFile : albums) {
             searchResult.getAlbum().add(createJaxbChild(player, mediaFile, username));
         }
 
         criteria.setCount(getIntParameter(request, "songCount", 20));
         criteria.setOffset(getIntParameter(request, "songOffset", 0));
-        org.airsonic.player.domain.SearchResult songs = searchService.search(criteria, musicFolders, IndexType.SONG);
-        for (MediaFile mediaFile : songs.getMediaFiles()) {
+        List<MediaFile> songs;
+        if (query.startsWith("=")) {
+            songs = mediaFileDao.searchAdvancedSongs(username, query.substring(1), criteria.getCount());
+        } else {
+            org.airsonic.player.domain.SearchResult songsResults = searchService.search(criteria, musicFolders, IndexType.SONG);
+            songs = songsResults.getMediaFiles();
+        }
+        for (MediaFile mediaFile : songs) {
             searchResult.getSong().add(createJaxbChild(player, mediaFile, username));
         }
 
