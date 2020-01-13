@@ -77,13 +77,22 @@ public class PlaylistService {
 
     public PlaylistInfo getPlaylist(int id) {
         HttpServletRequest request = WebContextFactory.get().getHttpServletRequest();
+        String username = securityService.getCurrentUsername(request);
 
         Playlist playlist = playlistService.getPlaylist(id);
-        List<MediaFile> files = playlistService.getFilesInPlaylist(id, true);
 
-        String username = securityService.getCurrentUsername(request);
+        List<MediaFile> files;
+        if (playlist.getComment() != null && playlist.getComment().startsWith("=")) {
+            files = mediaFileDao.searchAdvancedSongs(username, playlist.getComment().substring(1), Integer.MAX_VALUE);
+            playlistService.setFilesInPlaylist(id, new ArrayList<>());
+            playlistService.setFilesInPlaylist(id, files);
+        } else {
+            files = playlistService.getFilesInPlaylist(id, true);
+        }
+
         mediaFileService.populateStarredDate(files, username);
         populateAccess(files, username);
+
         return new PlaylistInfo(playlist, createEntries(files));
     }
 
