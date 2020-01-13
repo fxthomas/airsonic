@@ -83,7 +83,7 @@ public class PlaylistService {
 
         List<MediaFile> files;
         if (playlist.getComment() != null && playlist.getComment().startsWith("=")) {
-            files = mediaFileDao.searchAdvancedSongs(username, playlist.getComment().substring(1), Integer.MAX_VALUE);
+            files = mediaFileDao.searchAdvancedSongs(username, playlist.getComment().substring(1), 200);
             playlistService.setFilesInPlaylist(id, new ArrayList<>());
             playlistService.setFilesInPlaylist(id, files);
         } else {
