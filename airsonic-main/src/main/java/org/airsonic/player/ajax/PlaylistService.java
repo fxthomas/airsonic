@@ -30,6 +30,8 @@ import org.airsonic.player.service.PlayerService;
 import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
 import org.directwebremoting.WebContextFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -47,6 +49,8 @@ import java.util.*;
  */
 @Service("ajaxPlaylistService")
 public class PlaylistService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PlaylistService.class);
 
     @Autowired
     private MediaFileService mediaFileService;
@@ -83,9 +87,14 @@ public class PlaylistService {
 
         List<MediaFile> files;
         if (playlist.getComment() != null && playlist.getComment().startsWith("=")) {
-            files = mediaFileDao.searchAdvancedSongs(username, playlist.getComment().substring(1), 200);
-            playlistService.setFilesInPlaylist(id, new ArrayList<>());
-            playlistService.setFilesInPlaylist(id, files);
+            try {
+                files = mediaFileDao.searchAdvancedSongs(username, playlist.getComment().substring(1), 200);
+                playlistService.setFilesInPlaylist(id, new ArrayList<>());
+                playlistService.setFilesInPlaylist(id, files);
+            } catch (Exception e) {
+                LOG.error("Unable to populate smart playlist id {}", id, e);
+                files = new ArrayList<>();
+            }
         } else {
             files = playlistService.getFilesInPlaylist(id, true);
         }
