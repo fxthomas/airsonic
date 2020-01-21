@@ -47,6 +47,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Performs authentication based on credentials being present in the HTTP request parameters. Also checks
@@ -71,7 +72,7 @@ public class RESTRequestParameterProcessingFilter implements Filter {
 
     private static RequestMatcher requiresAuthenticationRequestMatcher = new RegexRequestMatcher("/rest/.+",null);
 
-    private static boolean hasTokenSaltWarningBeenSent = false;
+    private static AtomicBoolean hasTokenSaltWarningBeenSent = new AtomicBoolean(false);
 
     protected boolean requiresAuthentication(HttpServletRequest request,
                                              HttpServletResponse response) {
@@ -178,12 +179,11 @@ public class RESTRequestParameterProcessingFilter implements Filter {
         }
 
         if (salt != null && token != null && !securityService.isTokenSaltAuthenticationAllowed()) {
-            if (!hasTokenSaltWarningBeenSent) {
+            if (hasTokenSaltWarningBeenSent.compareAndSet(false, true)) {
                 LOG.warn(
                     "{}: Client tried to use deprecated token+salt authentication while loading {}",
                     httpRequest.getRemoteAddr(),
                     Util.getAnonymizedURLForRequest(httpRequest));
-                hasTokenSaltWarningBeenSent = true;
             }
             return null;
         }
