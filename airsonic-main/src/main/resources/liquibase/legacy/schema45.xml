@@ -60,9 +60,6 @@
         <createIndex unique="true" tableName="share" indexName="idx_share_name">
             <column name="name"/>
         </createIndex>
-        <sql dbms="hsql">
-            set table share type cached
-        </sql>
         <createTable tableName="share_file">
             <column name="id" type="int" autoIncrement="true">
                 <constraints primaryKey="true" />
@@ -74,12 +71,26 @@
                 <constraints nullable="false" />
             </column>
         </createTable>
-        <sql dbms="hsql">
-            set table share_file type cached
-        </sql>
         <rollback>
             <dropTable tableName="share" />
             <dropTable tableName="share_file" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema45_003_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE share TYPE CACHED;
+          <comment>Set the share table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <sql>
+          SET TABLE share_file TYPE CACHED;
+          <comment>Set the share_file table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
 </databaseChangeLog>

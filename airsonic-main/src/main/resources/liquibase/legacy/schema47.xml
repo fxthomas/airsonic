@@ -109,12 +109,22 @@
         <createIndex tableName="media_file" indexName="idx_media_file_last_played">
             <column name="last_played"/>
         </createIndex>
-        <sql dbms="hsql">
-            set table media_file type cached
-        </sql>
         <rollback>
             <dropTable tableName="media_file" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema47_002_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE media_file TYPE CACHED;
+          <comment>Set the media_file table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
     <changeSet id="schema47_003" author="muff1nman">
         <validCheckSum>8:6e1ae92177617c5dad56d1ba85b241c0</validCheckSum>
@@ -147,12 +157,22 @@
         <createIndex tableName="artist" indexName="idx_artist_present" >
             <column name="present"/>
         </createIndex>
-        <sql dbms="hsql">
-            set table artist type cached
-        </sql>
         <rollback>
             <dropTable tableName="artist" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema47_003_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE artist TYPE CACHED;
+          <comment>Set the artist table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
     <changeSet id="schema47_004" author="muff1nman">
         <validCheckSum>8:024d07d67c14a4c993d0cb124396c99c</validCheckSum>
@@ -210,12 +230,22 @@
         <createIndex tableName="album" indexName="idx_album_present" >
             <column name="present"/>
         </createIndex>
-        <sql dbms="hsql">
-            set table album type cached
-        </sql>
         <rollback>
             <dropTable tableName="album" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema47_004_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE album TYPE CACHED;
+          <comment>Set the album table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
     <changeSet id="schema47_005" author="muff1nman">
         <preConditions onFail="MARK_RAN">
@@ -410,12 +440,22 @@
                 <constraints nullable="false" foreignKeyName="pf_mf_fk" referencedTableName="media_file" referencedColumnNames="id" deleteCascade="true" />
             </column>
         </createTable>
-        <sql dbms="hsql">
-            set table playlist_file type cached
-        </sql>
         <rollback>
             <dropTable tableName="playlist_file" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema47_011_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE playlist_file TYPE CACHED;
+          <comment>Set the playlist_file table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
     <changeSet id="schema47_012" author="muff1nman">
         <validCheckSum>8:15f0f633935a0478e63be5544ac0adcb</validCheckSum>

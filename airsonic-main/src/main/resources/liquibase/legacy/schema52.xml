@@ -97,11 +97,21 @@
                 <constraints nullable="false" foreignKeyName="pqf_mf_fk" referencedTableName="media_file" referencedColumnNames="id" deleteCascade="true" />
             </column>
         </createTable>
-        <sql dbms="hsql">
-            set table play_queue_file type cached
-        </sql>
         <rollback>
             <dropTable tableName="play_queue_file" />
         </rollback>
+    </changeSet>
+    <changeSet id="schema52_005_hsqldb_cached" author="fxthomas">
+        <preConditions onFail="CONTINUE">
+          <dbms type="hsqldb" />
+          <customPrecondition className="org.airsonic.player.spring.DbmsVersionPrecondition" >
+            <param name="major" value="2" />
+          </customPrecondition>
+        </preConditions>
+        <sql>
+          SET TABLE play_queue_file TYPE CACHED;
+          <comment>Set the play_queue_file table to 'CACHED' for HSQLDB, which prevents it from loading all data in memory.</comment>
+        </sql>
+        <rollback></rollback>
     </changeSet>
 </databaseChangeLog>
