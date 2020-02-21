@@ -8,10 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.*;
+import java.net.*;
 import java.util.*;
 
 @Service
@@ -33,6 +31,52 @@ public class InternetRadioService {
      * The maximum number of redirects for a remote playlist response.
      */
     private static final int PLAYLIST_REMOTE_MAX_REDIRECTS = 20;
+
+    /**
+     * Used to determine how to connect to the stream.
+     */
+    private enum StreamType {
+        AUDIO,
+        AUDIO_SHOUTCAST,
+        PLAYLIST,
+        HTML_OR_TEXT,
+        OTHER,
+    }
+
+    /**
+     * List of all known audio types
+     * https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Containers
+     */
+    private static List<String> AUDIO_CONTENT_TYPES = Arrays.asList(
+        "audio/3gpp",
+        "audio/aac",
+        "audio/flac",
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/mp4",
+        "audio/ogg",
+        "audio/wav",
+        "audio/webm"
+    );
+
+    /**
+     * https://en.wikipedia.org/wiki/M3U#Internet_media_types
+     * https://en.wikipedia.org/wiki/PLS_(file_format)
+     * https://en.wikipedia.org/wiki/Windows_Media_Player_Playlist
+     * https://en.wikipedia.org/wiki/XML_Shareable_Playlist_Format
+     */
+    private static List<String> PLAYLIST_CONTENT_TYPES = Arrays.asList(
+        "application/vnd.apple.mpegurl",
+        "application/vnd.apple.mpegurl.audio",
+        "audio/mpegurl",
+        "audio/x-mpegurl",
+        "application/mpegurl",
+        "application/x-mpegurl",
+        "audio/x-scpls",
+        "application/smil+xml",
+        "application/vnd.ms-wpl",
+        "application/xspf+xml"
+    );
 
     /**
      * A list of cached source URLs for remote playlists.
@@ -158,12 +202,79 @@ public class InternetRadioService {
         // Retrieve the remote playlist
         String playlistUrl = radio.getStreamUrl();
         LOG.debug("Parsing internet radio playlist at {}...", playlistUrl);
-        SpecificPlaylist inputPlaylist = retrievePlaylist(new URL(playlistUrl), maxByteSize, maxRedirects);
+
+        HttpURLConnection urlConnection = connectToURLWithRedirects(new URL(playlistUrl), maxRedirects);
+        List<InternetRadioSource> entries = new ArrayList<>();
+        try {
+            switch (guessStreamType(urlConnection)) {
+                case AUDIO:
+                    entries.add(new InternetRadioSource(playlistUrl));
+                    break;
+                case AUDIO_SHOUTCAST:
+                    // Workaround for old Shoutcast radios that behave differently when
+                    // retrieved from a browser User Agent.
+                    entries.add(new InternetRadioSource(playlistUrl + ";"));
+                    break;
+                case PLAYLIST:
+                    entries.addAll(retrievePlaylist(urlConnection, maxCount, maxByteSize));
+                    break;
+                case HTML_OR_TEXT:
+                    LOG.warn("Playlist format for URL {} likely unsupported (HTML/text)", playlistUrl.toString());
+                    entries.addAll(tryRetrievePlaylist(urlConnection, maxCount, maxByteSize));
+                    break;
+                default:
+                    LOG.warn("Playlist format for URL {} unknown", playlistUrl.toString());
+                    entries.addAll(tryRetrievePlaylist(urlConnection, maxCount, maxByteSize));
+                    break;
+            }
+        } finally {
+            urlConnection.disconnect();
+        }
+
+        return entries;
+    }
+
+    private List<InternetRadioSource> tryRetrievePlaylist(HttpURLConnection urlConnection, int maxCount, long maxByteSize) throws Exception {
+
+        // First try to retrieve playlist sources
+        List<InternetRadioSource> internetRadioSources = null;
+        try {
+            internetRadioSources = retrievePlaylist(urlConnection, maxCount, maxByteSize);
+        } catch (Exception e) {
+            LOG.debug("Cannot retrieve playlist from URL {}", urlConnection.getURL());
+        }
+
+        // But if that fails in any way, stop now and return a single URL
+        if (internetRadioSources == null || internetRadioSources.size() == 0) {
+            internetRadioSources = new ArrayList<>();
+            internetRadioSources.add(new InternetRadioSource(urlConnection.getURL().toString()));
+        }
+
+        return internetRadioSources;
+    }
+
+    private List<InternetRadioSource> retrievePlaylist(HttpURLConnection urlConnection, int maxCount, long maxByteSize) throws Exception {
+
+        // Retrieve a populated playlist instance from the given URL
+        SpecificPlaylist playlist;
+        try (InputStream in = urlConnection.getInputStream()) {
+            String contentEncoding = urlConnection.getContentEncoding();
+            if (maxByteSize > 0) {
+                playlist = SpecificPlaylistFactory.getInstance().readFrom(new BoundedInputStream(in, maxByteSize), contentEncoding);
+            } else {
+                playlist = SpecificPlaylistFactory.getInstance().readFrom(in, contentEncoding);
+            }
+        } finally {
+            urlConnection.disconnect();
+        }
+        if (playlist == null) {
+            throw new PlaylistFormatUnsupported("Unsupported playlist format " + urlConnection.getURL().toString());
+        }
 
         // Retrieve stream URLs
         List<InternetRadioSource> entries = new ArrayList<>();
         try {
-            inputPlaylist.toPlaylist().acceptDown(new PlaylistVisitor() {
+            playlist.toPlaylist().acceptDown(new PlaylistVisitor() {
                 @Override
                 public void beginVisitPlaylist(Playlist playlist) {
 
@@ -202,9 +313,14 @@ public class InternetRadioService {
                     if (maxCount > 0 && entries.size() >= maxCount) {
                         throw new PlaylistTooLarge("Remote playlist has too many sources (maximum " + maxCount + ")");
                     }
-                    String streamUrl = media.getSource().getURI().toString();
-                    LOG.debug("Got source media at {}", streamUrl);
-                    entries.add(new InternetRadioSource(streamUrl));
+                    URL streamUrl = media.getSource().getURL();
+                    if (isShoutcastURL(streamUrl)) {
+                        LOG.debug("Got source media at {} (working around ShoutCAST URL)", streamUrl.toString());
+                        streamUrl = new URL(streamUrl.toString() + ";");
+                    } else {
+                        LOG.debug("Got source media at {}", streamUrl.toString());
+                    }
+                    entries.add(new InternetRadioSource(streamUrl.toString()));
                 }
 
                 @Override
@@ -301,5 +417,87 @@ public class InternetRadioService {
         urlConnection.setUseCaches(true);
         urlConnection.connect();
         return urlConnection;
+    }
+
+    /**
+     * Try to guess the streaming type supported by a given URL by connecting to it and reading content
+     */
+    protected StreamType guessStreamType(HttpURLConnection connection) throws IOException {
+
+        URL url = connection.getURL();
+        String contentType = connection.getContentType();
+
+        if (contentType == null) {
+            LOG.debug("Did not found content type for URL {}", url.toString());
+            return StreamType.OTHER;
+        }
+
+        if (PLAYLIST_CONTENT_TYPES.contains(contentType)) {
+            LOG.debug("Found content type for URL {}: {} (known playlist type)", url.toString(), contentType);
+            return StreamType.PLAYLIST;
+        } else if (AUDIO_CONTENT_TYPES.contains(contentType)) {
+            LOG.debug("Found content type for URL {}: {} (known audio type)", url.toString(), contentType);
+            return StreamType.AUDIO;
+        } else if (contentType.startsWith("audio/")) {
+            LOG.debug("Found content type for URL {}: {} (guessing audio data)", url.toString(), contentType);
+            return StreamType.AUDIO;
+        } else if (contentType.startsWith("html/") || contentType.startsWith("text/")) {
+            LOG.debug("Found content type for URL {}: {} (guessing HTML/text data)", url.toString(), contentType);
+            return StreamType.HTML_OR_TEXT;
+        } else if ("unknown/unknown".equals(contentType) && isShoutcastURL(url)) {
+            LOG.debug("Found ShoutCast protocol on URL {}", url.toString());
+            return StreamType.AUDIO_SHOUTCAST;
+        } else {
+            LOG.debug("Found content type for URL {}: {} (non-streamable data?)", url.toString(), contentType);
+            return StreamType.OTHER;
+        }
+    }
+
+    /**
+     * Try to guess if the provided URL responds with old ShoutCast "ICY" headers instead of standard HTTP.
+     */
+    protected boolean isShoutcastURL(URL url) throws IOException {
+        // Try to connect to a recent Shoutcast URL that supports standard HTTP protocols
+        try {
+            return isRecentShoutcastURL(url);
+        // If that failed, try to use an old protocol that responds with "ICY 200 OK".
+        } catch (IOException e) {
+            return isOldShoutcastURL(url);
+        }
+    }
+
+    protected boolean isRecentShoutcastURL(URL url) throws IOException {
+        LOG.debug("Trying to probe for Shoutcast servers at URL {}", url.toString());
+        HttpURLConnection connection = connectToURL(url);
+        try {
+            if (connection.getHeaderFields().keySet().stream().anyMatch(s -> s.toLowerCase().startsWith("icy"))) {
+                return true;
+            }
+        } finally {
+            connection.disconnect();
+        }
+        return false;
+    }
+
+    protected boolean isOldShoutcastURL(URL url) throws IOException {
+        LOG.debug("Trying to probe for old Shoutcast servers at URL {}", url.toString());
+        String queryString = url.getPath();
+        if (url.getQuery() != null) queryString += url.getQuery();
+        String req = String.format("GET %s HTTP/1.0\r\nUser-Agent: Airsonic\r\nIcy-MetaData: 1\r\nConnection: keep-alive\r\n\r\n", queryString);
+
+        try (Socket socket = new Socket(url.getHost(), url.getPort())) {
+            try (OutputStream os = socket.getOutputStream()) {
+                try (InputStream is = socket.getInputStream()) {
+                    os.write(req.getBytes());
+                    byte[] bytes = new byte[3];
+                    is.read(bytes);
+                    String header = bytes.toString();
+                    if ("ICY".equals(bytes.toString())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

@@ -71,12 +71,16 @@ public class InternetRadioServiceTest {
         InputStream mockURLInputStream1 = new ByteArrayInputStream(TEST_STREAM_PLAYLIST_CONTENTS_1.getBytes());
         doReturn(mockURLInputStream1).when(mockURLConnection1).getInputStream();
         doReturn(HttpURLConnection.HTTP_OK).when(mockURLConnection1).getResponseCode();
+        doReturn("audio/mpegurl").when(mockURLConnection1).getContentType();
+        doReturn(new URL("http://example.com")).when(mockURLConnection1).getURL();
 
         // Prepare the mocked URL connection for the second simple playlist
         HttpURLConnection mockURLConnection2 = Mockito.mock(HttpURLConnection.class);
         InputStream mockURLInputStream2 = new ByteArrayInputStream(TEST_STREAM_PLAYLIST_CONTENTS_2.getBytes());
         doReturn(mockURLInputStream2).when(mockURLConnection2).getInputStream();
         doReturn(HttpURLConnection.HTTP_OK).when(mockURLConnection2).getResponseCode();
+        doReturn("audio/mpegurl").when(mockURLConnection2).getContentType();
+        doReturn(new URL("http://example.com")).when(mockURLConnection2).getURL();
 
         // Prepare the mocked URL connection for the redirection to simple playlist
         HttpURLConnection mockURLConnectionMove = Mockito.mock(HttpURLConnection.class);
@@ -103,6 +107,8 @@ public class InternetRadioServiceTest {
         };
         doReturn(mockURLInputStreamLarge).when(mockURLConnectionLarge).getInputStream();
         doReturn(HttpURLConnection.HTTP_OK).when(mockURLConnectionLarge).getResponseCode();
+        doReturn("audio/mpegurl").when(mockURLConnectionLarge).getContentType();
+        doReturn(new URL("http://example.com")).when(mockURLConnectionLarge).getURL();
 
         // Prepare the mocked URL connection for the 'content too large' test
         // (return a single entry with 'aaaa...' running infinitely long).
@@ -116,6 +122,8 @@ public class InternetRadioServiceTest {
         };
         doReturn(mockURLInputStreamLarge2).when(mockURLConnectionLarge2).getInputStream();
         doReturn(HttpURLConnection.HTTP_OK).when(mockURLConnectionLarge2).getResponseCode();
+        doReturn("audio/mpegurl").when(mockURLConnectionLarge2).getContentType();
+        doReturn(new URL("http://example.com")).when(mockURLConnectionLarge2).getURL();
 
         // Prepare the mock 'connectToURL' method
         doReturn(mockURLConnection1).when(internetRadioService).connectToURL(eq(new URL(TEST_PLAYLIST_URL_1)));
@@ -124,6 +132,7 @@ public class InternetRadioServiceTest {
         doReturn(mockURLConnectionMoveLoop).when(internetRadioService).connectToURL(eq(new URL(TEST_PLAYLIST_URL_MOVE_LOOP)));
         doReturn(mockURLConnectionLarge).when(internetRadioService).connectToURL(eq(new URL(TEST_PLAYLIST_URL_LARGE)));
         doReturn(mockURLConnectionLarge2).when(internetRadioService).connectToURL(eq(new URL(TEST_PLAYLIST_URL_LARGE_2)));
+        doReturn(false).when(internetRadioService).isShoutcastURL(any());
     }
 
     @Test
