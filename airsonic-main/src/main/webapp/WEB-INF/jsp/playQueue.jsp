@@ -212,7 +212,11 @@
         if (currentSong) {
             updateWindowTitle(currentSong);
             <c:if test="${model.notify}">
-            showNotification(currentSong);
+            if ('mediaSession' in top.navigator) {
+                showMediaSessionMetadata(currentSong);
+            } else {
+                showNotification(currentSong);
+            }
             </c:if>
         }
     }
@@ -234,6 +238,18 @@
 
         // Whenever playback starts, show a notification for the current playing song.
         $('#audioPlayer').on("playing", onPlaying);
+
+        if ('mediaSession' in top.navigator) {
+            //top.navigator.mediaSession.setActionHandler('play', onStart);
+            //top.navigator.mediaSession.setActionHandler('pause', onStop);
+            //top.navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
+            //top.navigator.mediaSession.setActionHandler('nexttrack', onNext);
+            // The action handlers need to be put on the frame that handles playback
+            //top.playQueue.navigator.mediaSession.setActionHandler('play', onStart);
+            //top.playQueue.navigator.mediaSession.setActionHandler('pause', onStop);
+            //top.playQueue.navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
+            //top.playQueue.navigator.mediaSession.setActionHandler('nexttrack', onNext);
+        }
     }
 
     function getPlayQueue() {
@@ -822,6 +838,31 @@
                     createNotification(song);
                 }
             });
+        }
+    }
+
+    function showMediaSessionMetadata(song) {
+        if ('mediaSession' in top.navigator) {
+            var metadata = new MediaMetadata({
+                title: song.title,
+                artist: song.artist,
+                album: song.album,
+                artwork: [
+                    { src: "coverArt.view?id=" + song.id + "&size=96", sizes: '96x96', type: 'image/jpeg' },
+                    { src: "coverArt.view?id=" + song.id + "&size=128", sizes: '128x128', type: 'image/jpeg' },
+                    { src: "coverArt.view?id=" + song.id + "&size=192", sizes: '192x192', type: 'image/jpeg' },
+                    { src: "coverArt.view?id=" + song.id + "&size=256", sizes: '256x256', type: 'image/jpeg' },
+                    { src: "coverArt.view?id=" + song.id + "&size=384", sizes: '384x384', type: 'image/jpeg' },
+                    { src: "coverArt.view?id=" + song.id + "&size=512", sizes: '512x512', type: 'image/jpeg' },
+                ]
+            });
+            // For now the metadata needs to be put on the top frame for it to be visible
+            top.navigator.mediaSession.metadata = metadata;
+            // The action handlers need to be put on the frame that handles playback
+            top.playQueue.navigator.mediaSession.setActionHandler('play', onStart);
+            top.playQueue.navigator.mediaSession.setActionHandler('pause', onStop);
+            top.playQueue.navigator.mediaSession.setActionHandler('previoustrack', onPrevious);
+            top.playQueue.navigator.mediaSession.setActionHandler('nexttrack', onNext);
         }
     }
 
