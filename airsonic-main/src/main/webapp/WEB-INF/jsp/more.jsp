@@ -8,9 +8,9 @@
         #progressBarContent {width: 0; height: 10px; background: url("<c:url value="/icons/default_light/progress.png"/>") repeat;}
         #randomPlayQueue td { padding: 0 5px; }
     </style>
-    <script type="text/javascript" src="<c:url value='/dwr/interface/transferService.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/dwr/engine.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/dwr/util.js'/>"></script>
+    <script type="text/javascript" src="<c:url value='/dwr/interface/transferService.js'/>"></script>
 
     <script type="text/javascript">
         function refreshProgress() {

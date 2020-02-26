@@ -4,11 +4,11 @@
     <%@ include file="head.jsp" %>
     <%@ include file="jquery.jsp" %>
     <script type="text/javascript" src="<c:url value='/script/utils.js'/>"></script>
+    <script type="text/javascript" src="<c:url value='/dwr/engine.js'/>"></script>
+    <script type="text/javascript" src="<c:url value='/dwr/util.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/dwr/interface/nowPlayingService.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/dwr/interface/playQueueService.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/dwr/interface/playlistService.js'/>"></script>
-    <script type="text/javascript" src="<c:url value='/dwr/engine.js'/>"></script>
-    <script type="text/javascript" src="<c:url value='/dwr/util.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/script/mediaelement/mediaelement-and-player.min.js'/>"></script>
     <script type="text/javascript" src="<c:url value='/script/playQueueCast.js'/>"></script>
     <style type="text/css">
@@ -648,7 +648,9 @@
         }
         updateCurrentImage();
         if (songs.length == 0) {
-            $('#audioPlayer').get(0).stop();
+            var player = getMediaElementPlayer();
+            player.pause();
+            player.src = '';
         }
     }
 
