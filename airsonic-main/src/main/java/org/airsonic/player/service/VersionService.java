@@ -202,17 +202,20 @@ public class VersionService {
     /**
      * Refreshes the latest final and beta versions.
      */
-    private void refreshLatestVersion() {
+    private synchronized void refreshLatestVersion() {
         long now = System.currentTimeMillis();
         boolean isOutdated = now - lastVersionFetched > LAST_VERSION_FETCH_INTERVAL;
 
         if (isOutdated) {
-            try {
-                lastVersionFetched = now;
-                readLatestVersion();
-            } catch (Exception x) {
-                LOG.warn("Failed to resolve latest Airsonic version.", x);
-            }
+            lastVersionFetched = now;
+            Thread t = new Thread(() -> {
+                try {
+                    readLatestVersion();
+                } catch (Exception x) {
+                    LOG.warn("Failed to resolve latest Airsonic version.", x);
+                }
+            }, "VersionCheck");
+            t.start();
         }
     }
 
