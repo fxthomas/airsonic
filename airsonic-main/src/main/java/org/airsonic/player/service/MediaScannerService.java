@@ -26,6 +26,7 @@ import org.airsonic.player.domain.*;
 import org.airsonic.player.service.search.IndexManager;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -203,7 +204,7 @@ public class MediaScannerService {
             // Maps from artist name to album count.
             Map<String, AtomicInteger> albumCount = new ConcurrentHashMap<>();
             Map<String, Artist> artists = new ConcurrentHashMap<>();
-            Map<String, Album> albums = new ConcurrentHashMap<>();
+            Map<Pair<String, String>, Album> albums = new ConcurrentHashMap<>();
             Map<String, Boolean> encountered = new ConcurrentHashMap<>();
             Genres genres = new Genres();
 
@@ -283,7 +284,7 @@ public class MediaScannerService {
     }
 
     private void scanFile(MediaFile file, MusicFolder musicFolder, MediaLibraryStatistics statistics,
-                          Map<String, AtomicInteger> albumCount, Map<String, Artist> artists, Map<String, Album> albums, Genres genres, Map<String, Boolean> encountered, boolean isPodcast) {
+                          Map<String, AtomicInteger> albumCount, Map<String, Artist> artists, Map<Pair<String, String>, Album> albums, Genres genres, Map<String, Boolean> encountered, boolean isPodcast) {
         if (scanCount.incrementAndGet() % 250 == 0) {
             LOG.info("Scanned media library with {} entries.", scanCount.get());
         }
@@ -333,14 +334,14 @@ public class MediaScannerService {
         }
     }
 
-    private void updateAlbum(MediaFile file, MusicFolder musicFolder, Date lastScanned, Map<String, AtomicInteger> albumCount, Map<String, Album> albums) {
+    private void updateAlbum(MediaFile file, MusicFolder musicFolder, Date lastScanned, Map<String, AtomicInteger> albumCount, Map<Pair<String, String>, Album> albums) {
         String artist = file.getAlbumArtist() != null ? file.getAlbumArtist() : file.getArtist();
         if (file.getAlbumName() == null || artist == null || file.getParentPath() == null || !file.isAudio()) {
             return;
         }
 
         final AtomicBoolean firstEncounter = new AtomicBoolean(false);
-        Album album = albums.compute(file.getAlbumName() + "|" + artist, (k,v) -> {
+        Album album = albums.compute(Pair.of(file.getAlbumName(), artist), (k,v) -> {
             Album a = v;
 
             if (a == null) {
