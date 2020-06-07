@@ -20,12 +20,11 @@
 package org.airsonic.player.controller;
 
 import org.airsonic.player.command.SearchCommand;
+import org.airsonic.player.dao.MediaFileDao;
 import org.airsonic.player.domain.*;
 import org.airsonic.player.service.PlayerService;
-import org.airsonic.player.service.SearchService;
 import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
-import org.airsonic.player.service.search.IndexType;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,10 +47,10 @@ import java.util.List;
  * @author Sindre Mehus
  */
 @Controller
-@RequestMapping("/search")
-public class SearchController {
+@RequestMapping("/advsearch")
+public class AdvancedSearchController {
 
-    private static final int MATCH_COUNT = 25;
+    private static final int MATCH_COUNT = 0;
 
     @Autowired
     private SecurityService securityService;
@@ -60,11 +59,11 @@ public class SearchController {
     @Autowired
     private PlayerService playerService;
     @Autowired
-    private SearchService searchService;
+    private MediaFileDao mediaFileDao;
 
     @GetMapping
     protected String displayForm() {
-        return "search";
+        return "advsearch";
     }
 
     @ModelAttribute
@@ -87,23 +86,14 @@ public class SearchController {
         String query = StringUtils.trimToNull(command.getQuery());
 
         if (query != null) {
-            SearchCriteria criteria = new SearchCriteria();
-            criteria.setCount(MATCH_COUNT);
-            criteria.setQuery(query);
-
-            SearchResult artists = searchService.search(criteria, musicFolders, IndexType.ARTIST);
-            command.setArtists(artists.getMediaFiles());
-
-            SearchResult albums = searchService.search(criteria, musicFolders, IndexType.ALBUM);
-            command.setAlbums(albums.getMediaFiles());
-
-            SearchResult songs = searchService.search(criteria, musicFolders, IndexType.SONG);
-            command.setSongs(songs.getMediaFiles());
-
+            command.setQuery(query);
+            command.setSongs(mediaFileDao.searchAdvancedSongs(user.getUsername(), query, MATCH_COUNT));
+            // command.setAlbums(mediaFileDao.searchAdvancedAlbums(user.getUsername(), query, MATCH_COUNT));
+            // command.setArtists(mediaFileDao.searchAdvancedArtists(user.getUsername(), query, MATCH_COUNT));
             command.setPlayer(playerService.getPlayer(request, response));
         }
 
-        return "search";
+        return "advsearch";
     }
 
 }

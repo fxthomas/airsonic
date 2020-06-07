@@ -77,6 +77,7 @@
 <fmt:message key="top.more" var="more"/>
 <fmt:message key="top.help" var="help"/>
 <fmt:message key="top.search" var="search"/>
+<fmt:message key="top.advsearch" var="advsearch"/>
 
 <table style="margin:0;padding-top:5px">
     <tr>
@@ -128,6 +129,7 @@
                 <td><input required type="text" name="query" id="query" size="28" placeholder="${search}" onclick="select();"
                            onkeyup="triggerInstantSearch();"></td>
                 <td><a href="javascript:document.searchForm.submit()"><img src="<spring:theme code='searchImage'/>" alt="${search}" title="${search}"></a></td>
+                <td><a href="advsearch.view?" target="main"><img src="<spring:theme code='searchImage'/>" alt="${advsearch}" title="${advsearch}"></a></td>
             </form>
         </td>
 
