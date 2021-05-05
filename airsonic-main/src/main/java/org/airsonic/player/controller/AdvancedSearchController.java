@@ -25,6 +25,7 @@ import org.airsonic.player.domain.*;
 import org.airsonic.player.service.PlayerService;
 import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlVisitor;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -84,12 +85,18 @@ public class AdvancedSearchController {
 
         List<MusicFolder> musicFolders = settingsService.getMusicFoldersForUser(user.getUsername());
         String query = StringUtils.trimToNull(command.getQuery());
+        String orderBy = StringUtils.trimToNull(command.getOrderBy());
+        int limit = command.getLimit() > 0 ? command.getLimit() : MATCH_COUNT;
 
         if (query != null) {
             command.setQuery(query);
-            command.setSongs(mediaFileDao.searchAdvancedSongs(user.getUsername(), query, MATCH_COUNT));
-            // command.setAlbums(mediaFileDao.searchAdvancedAlbums(user.getUsername(), query, MATCH_COUNT));
-            // command.setArtists(mediaFileDao.searchAdvancedArtists(user.getUsername(), query, MATCH_COUNT));
+            try {
+                command.setSongs(mediaFileDao.searchAdvancedSongs(user.getUsername(), query, limit, orderBy));
+                // command.setAlbums(mediaFileDao.searchAdvancedAlbums(user.getUsername(), query, limit, orderBy));
+                // command.setArtists(mediaFileDao.searchAdvancedArtists(user.getUsername(), query, limit, orderBy));
+            } catch (AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError e) {
+                command.setErrorMessage(e.getMessage());
+            }
             command.setPlayer(playerService.getPlayer(request, response));
         }
 

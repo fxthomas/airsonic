@@ -10,9 +10,18 @@
 
     <script type="text/javascript" language="javascript">
         $(function() {
-            $("#artists-results").DataTables();
-            $("#albums-results").DataTables();
-            $("#songs-results").DataTables();
+
+            dataTableOptions = {
+                'buttons': ['columnsToggle'],
+                'paging': true,
+                'searching': true,
+                'order': [],
+                'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]]
+            }
+
+            $("#artists-results").DataTable(dataTableOptions);
+            $("#albums-results").DataTable(dataTableOptions);
+            $("#songs-results").DataTable(dataTableOptions);
         });
     </script>
 </head>
@@ -29,11 +38,17 @@
 
 <form method="post" action="advsearch.view" target="main" name="searchForm">
     <td><input required type="text" name="query" id="query" size="28" placeholder="${search}" value="${command.query}"></td>
+    <td><input type="number" name="limit" id="limit" placeholder="${limit}" value="${command.limit}"></td>
+    <td><input type="text" name="orderBy" id="orderBy" size="28" placeholder="${orderBy}" value="${command.orderBy}"></td>
     <td><input type="submit" value="Search"></td>
 </form>
 
 <c:if test="${not command.indexBeingCreated and empty command.artists and empty command.albums and empty command.songs}">
     <p class="warning"><fmt:message key="search.hits.none"/></p>
+</c:if>
+
+<c:if test="${not command.indexBeingCreated and not empty command.errorMessage}">
+    <p class="warning"><fmt:message key="search.hits.error"><fmt:param value="${command.errorMessage}"/></fmt:message></p>
 </c:if>
 
 <c:if test="${not empty command.artists}">
@@ -74,6 +89,16 @@
 <c:if test="${not empty command.songs}">
     <h2><b><fmt:message key="search.hits.songs"/></b></h2>
     <table id="songs-results" class="music indent">
+
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Album</th>
+                <th>Artist</th>
+            </tr>
+        </thead>
+
+        <tbody>
         <c:forEach items="${command.songs}" var="match" varStatus="loopStatus">
 
             <sub:url value="/main.view" var="mainUrl">
@@ -87,6 +112,8 @@
             </tr>
 
         </c:forEach>
+        </tbody>
+
     </table>
 </c:if>
 

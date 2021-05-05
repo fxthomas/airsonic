@@ -12,6 +12,12 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
 
     protected String username;
 
+    public static class AdvancedSearchQueryParseError extends Exception {
+        public AdvancedSearchQueryParseError(String message) {
+            super(message);
+        }
+    }
+
     public static class SqlWhereClause {
         private StringBuilder clause;
         private List<Object> clauseArguments;
@@ -197,14 +203,32 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             return args;
         }
 
-        public String getSelectClause(String tableName, String tableColumns) {
-            return String.format(
-                "SELECT %s FROM %s %s WHERE %s",
-                tableColumns,
-                tableName,
-                this.getJoinClause(),
-                this.getWhereClause()
-            );
+        public String getSelectClause(String tableName, String tableColumns, String[] orderByColumns) throws AdvancedSearchQueryParseError {
+
+            List<String> sqlOrderByClauses = new ArrayList<>();
+            for (String orderByColumn : orderByColumns) {
+                if (orderByColumn.isEmpty()) {
+                    continue;
+                }
+                String columnName = orderByColumn.startsWith("-") ? orderByColumn.substring(1) : orderByColumn;
+                String direction = orderByColumn.startsWith("-") ? "DESC" : "ASC";
+                if (!tableColumns.contains(columnName)) {
+                    throw new AdvancedSearchQueryParseError(
+                        String.format("Order field '%s' is not a valid name (valid names are %s)", columnName, String.join(", ", tableColumns)));
+                }
+                sqlOrderByClauses.add(String.format("%s %s", columnName, direction));
+            }
+
+            StringBuilder sqlQuery = new StringBuilder();
+            sqlQuery.append(String.format("SELECT %s FROM %s", tableColumns, tableName));
+            sqlQuery.append(String.format(" %s", this.getJoinClause()));
+            sqlQuery.append(String.format(" WHERE %s", this.getWhereClause()));
+
+            if (!sqlOrderByClauses.isEmpty()) {
+                sqlQuery.append(String.format(" ORDER BY %s", String.join(",", sqlOrderByClauses)));
+            }
+
+            return sqlQuery.toString();
         }
     }
 
@@ -541,12 +565,16 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         }
     }
 
-    public static SqlWhereClause toSql(String username, String expr) {
+    public static SqlWhereClause toSql(String username, String expr) throws AdvancedSearchQueryParseError {
         org.airsonic.player.service.search.parser.AdvancedSearchQueryLexer lexer = new org.airsonic.player.service.search.parser.AdvancedSearchQueryLexer(CharStreams.fromString(expr));
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         org.airsonic.player.service.search.parser.AdvancedSearchQueryParser parser = new org.airsonic.player.service.search.parser.AdvancedSearchQueryParser(tokens);
         parser.removeErrorListeners();
         parser.addErrorListener(new ThrowingErrorListener());
-        return new AdvancedSearchQuerySqlVisitor(username).visit(parser.query());
+        try {
+            return new AdvancedSearchQuerySqlVisitor(username).visit(parser.query());
+        } catch (ParseCancellationException e) {
+            throw new AdvancedSearchQueryParseError(e.getMessage());
+        }
     }
 }

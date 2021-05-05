@@ -494,26 +494,29 @@ public class MediaFileDao extends AbstractDao {
                           rowMapper, args);
     }
 
-    public List<MediaFile> searchAdvancedAlbums(final String username, String query, int count) {
+    public List<MediaFile> searchAdvancedAlbums(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
         LOG.info("Running advanced album search for user {}: {} (limit {})", username, query, count);
         AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlAlbumVisitor.toSql(username, query);
-        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        String orderByColumns[] = orderByString != null ? orderByString.trim().split("\\s+,\\s+") : new String[0];
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"), orderByColumns);
         List<Object> args = new ArrayList<>();
         return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
     }
 
-    public List<MediaFile> searchAdvancedSongs(final String username, String query, int count) {
+    public List<MediaFile> searchAdvancedSongs(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
         LOG.info("Running advanced song search for user {}: {} (limit {})", username, query, count);
         AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlMusicVisitor.toSql(username, query);
-        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        String orderByColumns[] = orderByString != null ? orderByString.trim().split("\\s+,\\s+") : new String[0];
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"), orderByColumns);
         List<Object> args = new ArrayList<>();
         return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
     }
 
-    public List<MediaFile> searchAdvancedArtists(final String username, String query, int count) {
+    public List<MediaFile> searchAdvancedArtists(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
         LOG.info("Running advanced artist search for user {}: {} (limit {})", username, query, count);
         AdvancedSearchQuerySqlVisitor.SqlWhereClause clause = AdvancedSearchQuerySqlArtistVisitor.toSql(username, query);
-        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        String orderByColumns[] = orderByString != null ? orderByString.trim().split("\\s+,\\s+") : new String[0];
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"), orderByColumns);
         List<Object> args = new ArrayList<>();
         return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
     }

@@ -715,7 +715,7 @@ public class SubsonicRESTController {
         criteria.setOffset(getIntParameter(request, "artistOffset", 0));
         List<MediaFile> artists;
         if (query.startsWith("=")) {
-            artists = mediaFileDao.searchAdvancedArtists(username, query.substring(1), criteria.getCount());
+            artists = mediaFileDao.searchAdvancedArtists(username, query.substring(1), criteria.getCount(), null);
         } else {
             org.airsonic.player.domain.SearchResult artistsResults = searchService.search(criteria, musicFolders, IndexType.ARTIST);
             artists = artistsResults.getMediaFiles();
@@ -728,7 +728,7 @@ public class SubsonicRESTController {
         criteria.setOffset(getIntParameter(request, "albumOffset", 0));
         List<MediaFile> albums;
         if (query.startsWith("=")) {
-            albums = mediaFileDao.searchAdvancedAlbums(username, query.substring(1), criteria.getCount());
+            albums = mediaFileDao.searchAdvancedAlbums(username, query.substring(1), criteria.getCount(), null);
         } else {
             org.airsonic.player.domain.SearchResult albumsResults = searchService.search(criteria, musicFolders, IndexType.ALBUM);
             albums = albumsResults.getMediaFiles();
@@ -741,7 +741,7 @@ public class SubsonicRESTController {
         criteria.setOffset(getIntParameter(request, "songOffset", 0));
         List<MediaFile> songs;
         if (query.startsWith("=")) {
-            songs = mediaFileDao.searchAdvancedSongs(username, query.substring(1), criteria.getCount());
+            songs = mediaFileDao.searchAdvancedSongs(username, query.substring(1), criteria.getCount(), null);
         } else {
             org.airsonic.player.domain.SearchResult songsResults = searchService.search(criteria, musicFolders, IndexType.SONG);
             songs = songsResults.getMediaFiles();
