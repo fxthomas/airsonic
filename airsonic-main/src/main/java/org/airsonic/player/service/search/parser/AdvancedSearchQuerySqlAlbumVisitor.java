@@ -6,9 +6,9 @@ public class AdvancedSearchQuerySqlAlbumVisitor extends AdvancedSearchQuerySqlVi
         super(username);
     }
 
-    public static SqlWhereClause toSql(String username, String expr) throws AdvancedSearchQueryParseError {
-        SqlWhereClause clause = AdvancedSearchQuerySqlVisitor.toSql(username, expr);
-        clause.and("media_file.type = 'ALBUM'");
+    public static SqlClause toSql(String username, String expr, String orderExpr) throws AdvancedSearchQueryParseError {
+        SqlClause clause = AdvancedSearchQuerySqlVisitor.toSql(username, expr, orderExpr);
+        clause.andWhere("media_file.type = 'ALBUM'");
         return clause;
     }
 }
