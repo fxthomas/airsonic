@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -495,27 +497,36 @@ public class MediaFileDao extends AbstractDao {
     }
 
     public List<MediaFile> searchAdvancedAlbums(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
-        LOG.info("Running advanced album search for user {}: {} (limit {})", username, query, count);
+        LOG.info("Running advanced album search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
         AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlAlbumVisitor.toSql(username, query, orderByString);
         String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
         List<Object> args = new ArrayList<>();
-        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
     }
 
     public List<MediaFile> searchAdvancedSongs(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
-        LOG.info("Running advanced song search for user {}: {} (limit {})", username, query, count);
+        LOG.info("Running advanced song search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
         AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlMusicVisitor.toSql(username, query, orderByString);
         String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
         List<Object> args = new ArrayList<>();
-        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
     }
 
     public List<MediaFile> searchAdvancedArtists(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
-        LOG.info("Running advanced artist search for user {}: {} (limit {})", username, query, count);
+        LOG.info("Running advanced artist search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
         AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlArtistVisitor.toSql(username, query, orderByString);
         String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
         List<Object> args = new ArrayList<>();
-        return queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
     }
 
     public List<MediaFile> getRandomSongs(RandomSearchCriteria criteria, final String username) {
