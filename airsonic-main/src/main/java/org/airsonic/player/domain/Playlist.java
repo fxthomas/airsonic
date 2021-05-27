@@ -39,11 +39,16 @@ public class Playlist {
     private Date changed;
     private String importedFrom;
 
+    private String autoQuery;
+    private String autoOrder;
+    private int autoLimit;
+
     public Playlist() {
     }
 
     public Playlist(int id, String username, boolean shared, String name, String comment, int fileCount,
-                    int durationSeconds, Date created, Date changed, String importedFrom) {
+                    int durationSeconds, Date created, Date changed, String importedFrom, String autoQuery,
+                    String autoOrder, int autoLimit) {
         this.id = id;
         this.username = username;
         this.shared = shared;
@@ -54,6 +59,9 @@ public class Playlist {
         this.created = created;
         this.changed = changed;
         this.importedFrom = importedFrom;
+        this.autoQuery = autoQuery;
+        this.autoOrder = autoOrder;
+        this.autoLimit = autoLimit;
     }
 
     public int getId() {
@@ -138,5 +146,33 @@ public class Playlist {
 
     public void setImportedFrom(String importedFrom) {
         this.importedFrom = importedFrom;
+    }
+
+    public String getAutoQuery() {
+        return autoQuery;
+    }
+
+    public void setAutoQuery(String autoQuery) {
+        this.autoQuery = autoQuery;
+    }
+
+    public String getAutoOrder() {
+        return autoOrder;
+    }
+
+    public void setAutoOrder(String autoOrder) {
+        this.autoOrder = autoOrder;
+    }
+
+    public int getAutoLimit() {
+        return autoLimit;
+    }
+
+    public void setAutoLimit(int autoLimit) {
+        this.autoLimit = autoLimit;
+    }
+
+    public boolean isAutoPlaylist() {
+        return this.autoQuery != null && !this.autoQuery.isEmpty();
     }
 }

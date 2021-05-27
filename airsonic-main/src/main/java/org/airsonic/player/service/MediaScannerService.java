@@ -22,8 +22,10 @@ package org.airsonic.player.service;
 import org.airsonic.player.dao.AlbumDao;
 import org.airsonic.player.dao.ArtistDao;
 import org.airsonic.player.dao.MediaFileDao;
+import org.airsonic.player.dao.PlaylistDao;
 import org.airsonic.player.domain.*;
 import org.airsonic.player.service.search.IndexManager;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlVisitor;
 import org.apache.commons.lang.ObjectUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.slf4j.Logger;
@@ -69,6 +71,9 @@ public class MediaScannerService {
     private ArtistDao artistDao;
     @Autowired
     private AlbumDao albumDao;
+    @Autowired
+    private PlaylistDao playlistDao;
+
     private int scanCount;
 
     @PostConstruct
@@ -198,6 +203,22 @@ public class MediaScannerService {
             artistDao.markNonPresent(statistics.getScanDate());
             LOG.info("Marking non-present albums.");
             albumDao.markNonPresent(statistics.getScanDate());
+            LOG.info("Updating auto-playlists.");
+            for (Playlist playlist : playlistDao.getAutoPlaylists()) {
+                LOG.debug("Updating auto-playlist {} for user {}...", playlist.getId(), playlist.getUsername());
+                try {
+                    playlistDao.setFilesInPlaylist(
+                            playlist.getId(),
+                            mediaFileDao.searchAdvancedSongs(
+                                    playlist.getUsername(),
+                                    playlist.getAutoQuery(),
+                                    playlist.getAutoLimit(),
+                                    playlist.getAutoOrder()
+                            ));
+                } catch (AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError e) {
+                    LOG.warn("Unable to update auto-playlist {} for user {} (reason: {})", playlist.getId(), playlist.getUsername(), e.getMessage());
+                }
+            }
 
             // Update statistics
             statistics.incrementArtists(albumCount.size());

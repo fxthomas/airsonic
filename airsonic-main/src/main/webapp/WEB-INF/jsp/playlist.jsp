@@ -21,9 +21,20 @@
                         var name = $("#newName").val();
                         var comment = $("#newComment").val();
                         var shared = $("#newShared").is(":checked");
+                        var autoQuery = $("#newAutoQuery").val();
+                        var autoOrder = $("#newAutoOrder").val();
+                        var autoLimit = $("#newAutoLimit").val();
                         $("#name").text(name);
                         $("#comment").text(comment);
-                        playlistService.updatePlaylist(playlist.id, name, comment, shared, function (playlistInfo){playlistCallback(playlistInfo); top.left.updatePlaylists()});
+                        playlistService.updatePlaylist(
+                            playlist.id,
+                            name,
+                            comment,
+                            shared,
+                            autoQuery,
+                            autoOrder,
+                            autoLimit,
+                            function (playlistInfo){playlistCallback(playlistInfo); top.left.updatePlaylists()});
                     },
                     "<fmt:message key="common.cancel"/>": function() {
                         $(this).dialog("close");
@@ -266,6 +277,8 @@
 
 <div id="dialog-edit" title="<fmt:message key='common.edit'/>" style="display: none;">
     <form>
+
+        <!-- Standard playlists -->
         <label for="newName" style="display:block;"><fmt:message key="playlist2.name"/></label>
         <input type="text" name="newName" id="newName" value="${fn:escapeXml(model.playlist.name)}" class="ui-widget-content"
                style="display:block;width:95%;"/>
@@ -274,6 +287,17 @@
                style="display:block;width:95%;"/>
         <input type="checkbox" name="newShared" id="newShared" ${model.playlist.shared ? "checked='checked'" : ""} style="margin-top:1.5em" class="ui-widget-content"/>
         <label for="newShared"><fmt:message key="playlist2.public"/></label>
+
+        <!-- Auto playlists -->
+        <label for="newAutoQuery" style="display:block;margin-top:1em"><fmt:message key="playlist2.autoquery"/></label>
+        <input type="text" name="newAutoQuery" id="newAutoQuery" value="${fn:escapeXml(model.playlist.autoQuery)}" class="ui-widget-content"
+               style="display:block;width:95%;"/>
+        <label for="newAutoOrder" style="display:block;margin-top:1em"><fmt:message key="playlist2.autoorder"/></label>
+        <input type="text" name="newAutoOrder" id="newAutoOrder" value="${fn:escapeXml(model.playlist.autoOrder)}" class="ui-widget-content"
+               style="display:block;width:95%;"/>
+        <label for="newAutoLimit" style="display:block;margin-top:1em"><fmt:message key="playlist2.autolimit"/></label>
+        <input type="numeric" name="newAutoLimit" id="newAutoLimit" value="${fn:escapeXml(model.playlist.autoLimit)}" class="ui-widget-content"
+               style="display:block;width:95%;"/>
     </form>
 </div>
 

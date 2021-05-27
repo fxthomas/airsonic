@@ -22,7 +22,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         TITLE("title"),
         ALBUM("album"),
         ARTIST("artist"),
-        ALBUM_ARTIST("album_artist"),
+        ALBUM_ARTIST("albumartist"),
         DISC_NUMBER("discnumber"),
         TRACK_NUMBER("tracknumber"),
         BIT_RATE("bitrate"),
@@ -39,7 +39,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         FOLDER("folder"),
         LAST_PLAYED("lastplayed"),
         FORMAT("format"),
-        PLAY_COUNT("play_count"),
+        PLAY_COUNT("playcount"),
         ALBUM_RATING("albumrating"),
         STARRED("starred"),
 

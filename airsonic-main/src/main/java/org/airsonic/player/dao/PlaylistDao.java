@@ -37,7 +37,7 @@ import java.util.*;
 @Repository
 public class PlaylistDao extends AbstractDao {
     private static final String INSERT_COLUMNS = "username, is_public, name, comment, file_count, duration_seconds, " +
-                                                "created, changed, imported_from";
+                                                "created, changed, imported_from, auto_query, auto_order, auto_limit";
     private static final String QUERY_COLUMNS = "id, " + INSERT_COLUMNS;
     private final RowMapper<Playlist> rowMapper = new PlaylistMapper();
 
@@ -76,11 +76,16 @@ public class PlaylistDao extends AbstractDao {
         return query("select " + QUERY_COLUMNS + " from playlist", rowMapper);
     }
 
+    public List<Playlist> getAutoPlaylists() {
+        return query("select " + QUERY_COLUMNS + " from playlist where auto_query != ''", rowMapper);
+    }
+
     @Transactional
     public void createPlaylist(Playlist playlist) {
         update("insert into playlist(" + INSERT_COLUMNS + ") values(" + questionMarks(INSERT_COLUMNS) + ")",
                 playlist.getUsername(), playlist.isShared(), playlist.getName(), playlist.getComment(),
-                0, 0, playlist.getCreated(), playlist.getChanged(), playlist.getImportedFrom());
+                0, 0, playlist.getCreated(), playlist.getChanged(), playlist.getImportedFrom(),
+                playlist.getAutoQuery(), playlist.getAutoOrder(), playlist.getAutoLimit());
 
         int id = queryForInt("select max(id) from playlist", 0);
         playlist.setId(id);
@@ -118,9 +123,11 @@ public class PlaylistDao extends AbstractDao {
     }
 
     public void updatePlaylist(Playlist playlist) {
-        update("update playlist set username=?, is_public=?, name=?, comment=?, changed=?, imported_from=? where id=?",
+        update("update playlist set username=?, is_public=?, name=?, comment=?, changed=?, imported_from=?, auto_query=?, auto_order=?, auto_limit=? where id=?",
                 playlist.getUsername(), playlist.isShared(), playlist.getName(), playlist.getComment(),
-                new Date(), playlist.getImportedFrom(), playlist.getId());
+                new Date(), playlist.getImportedFrom(),
+                playlist.getAutoQuery(), playlist.getAutoOrder(), playlist.getAutoLimit(),
+                playlist.getId());
     }
 
     private static class PlaylistMapper implements RowMapper<Playlist> {
@@ -135,7 +142,10 @@ public class PlaylistDao extends AbstractDao {
                     rs.getInt(7),
                     rs.getTimestamp(8),
                     rs.getTimestamp(9),
-                    rs.getString(10));
+                    rs.getString(10),
+                    rs.getString(11),
+                    rs.getString(12),
+                    rs.getInt(13));
         }
     }
 }
