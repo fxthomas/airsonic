@@ -44,7 +44,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         STARRED("starred"),
 
         // Query-backed fields
-        _RANKING("_ranking"),
+        _RANKING("ranking"),
         ;
 
         private String fieldName;
@@ -188,7 +188,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         private StringBuilder whereClause;
         private List<Object> whereClauseArguments;
         private Map<String, String> joins;
-        private List<Object> joinArguments;
+        private Map<String, Object> joinArguments;
         private List<String> orderClause;
 
         public SqlClause() {
@@ -196,7 +196,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             this.whereClause = new StringBuilder();
             this.whereClauseArguments = new ArrayList<>();
             this.joins = new TreeMap<>();
-            this.joinArguments = new ArrayList<>();
+            this.joinArguments = new TreeMap<>();
             this.orderClause = new ArrayList<>();
         }
 
@@ -205,7 +205,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             this.whereClause = new StringBuilder();
             this.whereClauseArguments = new ArrayList<>();
             this.joins = new TreeMap<>();
-            this.joinArguments = new ArrayList<>();
+            this.joinArguments = new TreeMap<>();
             this.addWhere(expr);
         }
 
@@ -214,7 +214,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
             this.whereClause = new StringBuilder();
             this.whereClauseArguments = new ArrayList<>();
             this.joins = new TreeMap<>();
-            this.joinArguments = new ArrayList<>();
+            this.joinArguments = new TreeMap<>();
             this.addWhere(expr, arg);
         }
 
@@ -242,13 +242,18 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         }
 
         public void addJoin(String alias, String expr, Object argument) {
+            if (!this.joins.containsKey(alias)) this.joinArguments.put(alias, argument);
             this.addJoin(alias, expr);
-            this.joinArguments.add(argument);
         }
 
         public void addJoin(SqlClause other) {
-            this.joins.putAll(other.joins);
-            this.joinArguments.addAll(other.joinArguments);
+            for (String alias : other.joins.keySet()) {
+                if (other.joinArguments.containsKey(alias)) {
+                    this.addJoin(alias, other.joins.get(alias), other.joinArguments.get(alias));
+                } else {
+                    this.addJoin(alias, other.joins.get(alias));
+                }
+            }
         }
 
         public void addOrder(String expr) {
@@ -415,13 +420,13 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         }
 
         public List<Object> getJoinArguments() {
-            return this.joinArguments;
+            return Arrays.asList(this.joinArguments.values().toArray());  // Should be sorted in the same order as the key
         }
 
         public List<Object> getAllArguments() {
             List<Object> args = new ArrayList<>();
-            args.addAll(this.joinArguments);
-            args.addAll(this.whereClauseArguments);
+            args.addAll(this.getJoinArguments());
+            args.addAll(this.getWhereClauseArguments());
             return args;
         }
 
@@ -598,7 +603,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
                 clause.addAdditionalSelect("_RANKING_DL", "(CASE WHEN DATEDIFF(DAY, LAST_PLAYED, NOW()) <= 0 THEN 1 ELSE DATEDIFF(DAY, LAST_PLAYED, NOW()) END)");
                 clause.addAdditionalSelect("_RANKING_PC", "MEDIA_FILE.PLAY_COUNT");
                 clause.addAdditionalSelect("_RANKING_APC", "MEDIA_ALBUM.PLAY_COUNT");
-                clause.addAdditionalSelect("_RANKING_R", "IFNULL(MEDIA_ALBUM.RATING, 2)");
+                clause.addAdditionalSelect("_RANKING_R", "IFNULL(USER_RATING.RATING, 2)");
             default:
                 break;
         }
@@ -608,7 +613,7 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
         addFieldSpecificClauses(field, clause);
         switch (field) {
             case _RANKING:
-                clause.addOrder("POWER(_RANKING_R,2) * POWER(_RANKING_PC + 0.5*_RANKING_APC, 1) * POWER(_RANKING_DS, -1) * POWER(_RANKING_DC, -1) * POWER(_RANKING_DL, 0", ascending);
+                clause.addOrder("POWER(_RANKING_R,2) * POWER(_RANKING_PC + 0.5*_RANKING_APC, 1) * POWER(_RANKING_DS, -1) * POWER(_RANKING_DC, -1) * POWER(_RANKING_DL, 0)", ascending);
                 break;
             default:
                 clause.addOrder(field.getSqlFullColumn(), ascending);
@@ -790,8 +795,8 @@ public class AdvancedSearchQuerySqlVisitor extends org.airsonic.player.service.s
 
             // Find field name
             orderColumn = orderColumn.trim();
-            boolean ascending = orderColumn.startsWith("-") ? false : true;
-            orderColumn = orderColumn.substring(1).trim().toLowerCase();
+            boolean ascending = !orderColumn.startsWith("-");
+            orderColumn = orderColumn.substring(!ascending ? 1 : 0).trim().toLowerCase();
             if (orderColumn.isEmpty()) continue;
 
             // Convert that to a field instance
