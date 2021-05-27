@@ -27,6 +27,8 @@ import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
 import org.airsonic.player.service.search.IndexType;
 import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -70,6 +72,8 @@ public class SearchController {
         model.addAttribute("command",new SearchCommand());
     }
 
+    private static final Logger LOG = LoggerFactory.getLogger(SearchController.class);
+
     @PostMapping
     protected String onSubmit(HttpServletRequest request, HttpServletResponse response,@ModelAttribute("command") SearchCommand command, Model model)
             throws Exception {
@@ -83,7 +87,6 @@ public class SearchController {
         String query = StringUtils.trimToNull(command.getQuery());
 
         if (query != null) {
-
             SearchCriteria criteria = new SearchCriteria();
             criteria.setCount(MATCH_COUNT);
             criteria.setQuery(query);

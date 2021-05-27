@@ -108,3 +108,9 @@ html {
 label, p {
 	color: #CCC;
 }
+
+/* Datatables */
+
+.paginate_button {
+  background-color: gray;
+}

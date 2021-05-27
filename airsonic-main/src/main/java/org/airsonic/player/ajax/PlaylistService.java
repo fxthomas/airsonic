@@ -30,6 +30,8 @@ import org.airsonic.player.service.PlayerService;
 import org.airsonic.player.service.SecurityService;
 import org.airsonic.player.service.SettingsService;
 import org.directwebremoting.WebContextFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -47,6 +49,8 @@ import java.util.*;
  */
 @Service("ajaxPlaylistService")
 public class PlaylistService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PlaylistService.class);
 
     @Autowired
     private MediaFileService mediaFileService;
@@ -77,13 +81,31 @@ public class PlaylistService {
 
     public PlaylistInfo getPlaylist(int id) {
         HttpServletRequest request = WebContextFactory.get().getHttpServletRequest();
+        String username = securityService.getCurrentUsername(request);
 
         Playlist playlist = playlistService.getPlaylist(id);
-        List<MediaFile> files = playlistService.getFilesInPlaylist(id, true);
 
-        String username = securityService.getCurrentUsername(request);
+        List<MediaFile> files;
+        if (playlist.isAutoPlaylist()) {
+            try {
+                files = mediaFileDao.searchAdvancedSongs(
+                        playlist.getUsername(),
+                        playlist.getAutoQuery(),
+                        playlist.getAutoLimit(),
+                        playlist.getAutoOrder());
+                playlistService.setFilesInPlaylist(id, new ArrayList<>());
+                playlistService.setFilesInPlaylist(id, files);
+            } catch (Exception e) {
+                LOG.error("Unable to populate smart playlist id {}", id, e);
+                files = new ArrayList<>();
+            }
+        } else {
+            files = playlistService.getFilesInPlaylist(id, true);
+        }
+
         mediaFileService.populateStarredDate(files, username);
         populateAccess(files, username);
+
         return new PlaylistInfo(playlist, createEntries(files));
     }
 
@@ -107,6 +129,9 @@ public class PlaylistService {
         playlist.setChanged(now);
         playlist.setShared(false);
         playlist.setName(dateFormat.format(now));
+        playlist.setAutoQuery("");
+        playlist.setAutoOrder("");
+        playlist.setAutoLimit(0);
 
         playlistService.createPlaylist(playlist);
         return getReadablePlaylists();
@@ -126,6 +151,9 @@ public class PlaylistService {
         playlist.setChanged(now);
         playlist.setShared(false);
         playlist.setName(dateFormat.format(now));
+        playlist.setAutoQuery("");
+        playlist.setAutoOrder("");
+        playlist.setAutoLimit(0);
 
         playlistService.createPlaylist(playlist);
         playlistService.setFilesInPlaylist(playlist.getId(), player.getPlayQueue().getFiles());
@@ -145,6 +173,9 @@ public class PlaylistService {
         playlist.setCreated(now);
         playlist.setChanged(now);
         playlist.setShared(false);
+        playlist.setAutoQuery("");
+        playlist.setAutoOrder("");
+        playlist.setAutoLimit(0);
 
         ResourceBundle bundle = ResourceBundle.getBundle("org.airsonic.player.i18n.ResourceBundle", locale);
         playlist.setName(bundle.getString("top.starred") + " " + dateFormat.format(now));
@@ -234,11 +265,14 @@ public class PlaylistService {
         playlistService.deletePlaylist(id);
     }
 
-    public PlaylistInfo updatePlaylist(int id, String name, String comment, boolean shared) {
+    public PlaylistInfo updatePlaylist(int id, String name, String comment, boolean shared, String autoQuery, String autoOrder, int autoLimit) {
         Playlist playlist = playlistService.getPlaylist(id);
         playlist.setName(name);
         playlist.setComment(comment);
         playlist.setShared(shared);
+        playlist.setAutoQuery(autoQuery);
+        playlist.setAutoOrder(autoOrder);
+        playlist.setAutoLimit(autoLimit);
         playlistService.updatePlaylist(playlist);
         return getPlaylist(id);
     }

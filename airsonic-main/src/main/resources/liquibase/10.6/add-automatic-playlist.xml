@@ -1,0 +1,21 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    <changeSet id="add-automatic-playlist" author="fxthomas">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <and>
+                    <columnExists tableName="playlist" columnName="auto_query" />
+                    <columnExists tableName="playlist" columnName="auto_order" />
+                    <columnExists tableName="playlist" columnName="auto_limit" />
+                </and>
+            </not>
+        </preConditions>
+        <addColumn tableName="playlist">
+            <column name="auto_query" type="${varchar_type}" defaultValue=""><constraints nullable="false" /></column>
+            <column name="auto_order" type="${varchar_type}" defaultValue=""><constraints nullable="false" /></column>
+            <column name="auto_limit" type="int" defaultValueNumeric="0"><constraints nullable="false" /></column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

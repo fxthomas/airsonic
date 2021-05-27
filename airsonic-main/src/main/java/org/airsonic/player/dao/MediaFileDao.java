@@ -19,10 +19,16 @@
  */
 package org.airsonic.player.dao;
 
+import com.google.common.collect.ImmutableMap;
+
 import org.airsonic.player.domain.Genre;
 import org.airsonic.player.domain.MediaFile;
 import org.airsonic.player.domain.MusicFolder;
 import org.airsonic.player.domain.RandomSearchCriteria;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlAlbumVisitor;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlArtistVisitor;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlMusicVisitor;
+import org.airsonic.player.service.search.parser.AdvancedSearchQuerySqlVisitor;
 import org.airsonic.player.util.Util;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -34,6 +40,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -51,6 +59,18 @@ public class MediaFileDao extends AbstractDao {
 
     private static final String QUERY_COLUMNS = "id, " + INSERT_COLUMNS;
     private static final String GENRE_COLUMNS = "name, song_count, album_count";
+
+    // LIKE queries treat `\` as a special character in some databases (MariaDB and PostgreSQL),
+    // which fails path checks on Windows where it is the default path separator.
+    //
+    // For Windows platforms, using '/' is safe because it is also disallowed in paths.
+    // For Linux platforms, using '\' is allowed (a media folder with '\' in it would have issues), but not likely.
+    //
+    // Most tested databases (HSQLDB, PostgreSQL, MariaDB, sqlite,...) support the ESCAPE keyword
+    // after a LIKE clause for specifying another character and avoiding this issue.
+    //
+    // See https://github.com/airsonic/airsonic/pull/1704
+    private static final String LIKE_PATH_ESCAPE_CHARACTER = "\\".equals(File.separator) ? "/" : "\\";
 
     public static final int VERSION = 4;
 
@@ -206,6 +226,12 @@ public class MediaFileDao extends AbstractDao {
 
     public void deleteMediaFile(String path) {
         update("update media_file set present=false, children_last_updated=? where path=?", new Date(0L), path);
+    }
+
+    public void deleteMediaFiles(Collection<String> paths) {
+        if (!paths.isEmpty()) {
+            namedUpdate("update media_file set present=false, children_last_updated=:updatedate where path in (:paths)", ImmutableMap.of("updatedate", new Date(0L), "paths", paths));
+        }
     }
 
     public List<Genre> getGenres(boolean sortByAlbum) {
@@ -490,6 +516,39 @@ public class MediaFileDao extends AbstractDao {
                           rowMapper, args);
     }
 
+    public List<MediaFile> searchAdvancedAlbums(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
+        LOG.info("Running advanced album search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
+        AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlAlbumVisitor.toSql(username, query, orderByString);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
+    }
+
+    public List<MediaFile> searchAdvancedSongs(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
+        LOG.info("Running advanced song search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
+        AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlMusicVisitor.toSql(username, query, orderByString);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
+    }
+
+    public List<MediaFile> searchAdvancedArtists(final String username, String query, int count, String orderByString) throws AdvancedSearchQuerySqlVisitor.AdvancedSearchQueryParseError {
+        LOG.info("Running advanced artist search for user {}: [{}] (limit {} order [{}])...", username, query, count, orderByString);
+        Instant then = Instant.now();
+        AdvancedSearchQuerySqlVisitor.SqlClause clause = AdvancedSearchQuerySqlArtistVisitor.toSql(username, query, orderByString);
+        String sql = clause.getSelectClause("media_file", prefix(QUERY_COLUMNS, "media_file"));
+        List<Object> args = new ArrayList<>();
+        List<MediaFile> ret = queryWithLimit(sql, rowMapper, clause.getAllArguments(), count);
+        LOG.info("Advanced search query finished in {} seconds", Duration.between(then, Instant.now()).getSeconds());
+        return ret;
+    }
+
     public List<MediaFile> getRandomSongs(RandomSearchCriteria criteria, final String username) {
         if (criteria.getMusicFolders().isEmpty()) {
             return Collections.emptyList();
@@ -642,9 +701,9 @@ public class MediaFileDao extends AbstractDao {
         return query(
                 "SELECT " + prefix(QUERY_COLUMNS, "media_file") + " FROM media_file " +
                 "WHERE media_file.path != media_file.folder " +
-                "AND media_file.path NOT LIKE concat(media_file.folder, concat(?, '%')) " +
+                "AND media_file.path NOT LIKE media_file.folder || ? || '%' ESCAPE ?" +
                 "ORDER BY media_file.id LIMIT ?",
-                rowMapper, File.separator, count);
+                rowMapper, File.separator, LIKE_PATH_ESCAPE_CHARACTER, count);
     }
 
     /**
@@ -655,8 +714,8 @@ public class MediaFileDao extends AbstractDao {
         return queryForInt(
                 "SELECT count(media_file.id) FROM media_file " +
                 "WHERE media_file.path != media_file.folder " +
-                "AND media_file.path NOT LIKE concat(media_file.folder, '/%')",
-                0);
+                "AND media_file.path NOT LIKE media_file.folder || ? || '%' ESCAPE ?",
+                0, File.separator, LIKE_PATH_ESCAPE_CHARACTER);
     }
 
     public int getAlbumCount(final List<MusicFolder> musicFolders) {
@@ -714,17 +773,17 @@ public class MediaFileDao extends AbstractDao {
         update("update media_file set present=?, last_scanned = ? where path=?", true, lastScanned, path);
     }
 
-    public void markNonPresent(Date lastScanned) {
-        int minId = queryForInt("select min(id) from media_file where last_scanned < ? and present", 0, lastScanned);
-        int maxId = queryForInt("select max(id) from media_file where last_scanned < ? and present", 0, lastScanned);
-
-        final int batchSize = 1000;
-        Date childrenLastUpdated = new Date(0L);  // Used to force a children rescan if file is later resurrected.
-        for (int id = minId; id <= maxId; id += batchSize) {
-            update("update media_file set present=false, children_last_updated=? where id between ? and ? and " +
-                            "last_scanned < ? and present",
-                   childrenLastUpdated, id, id + batchSize, lastScanned);
+    public void markPresent(Collection<String> paths, Date lastScanned) {
+        if (!paths.isEmpty()) {
+            namedUpdate("update media_file set present=true, last_scanned = :lastScanned where path in (:paths)", ImmutableMap.of("lastScanned", lastScanned, "paths", paths));
         }
+    }
+
+    public void markNonPresent(Date lastScanned) {
+        Date childrenLastUpdated = new Date(0L);  // Used to force a children rescan if file is later resurrected.
+
+        update("update media_file set present=false, children_last_updated=? where last_scanned < ? and present",
+                childrenLastUpdated, lastScanned);
     }
 
     public List<Integer> getArtistExpungeCandidates() {

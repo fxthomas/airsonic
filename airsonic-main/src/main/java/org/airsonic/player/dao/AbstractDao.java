@@ -79,6 +79,15 @@ public class AbstractDao {
         return result;
     }
 
+    protected int namedUpdate(String sql, Map<String, Object> args) {
+        long t = System.nanoTime();
+        LOG.trace("Executing query: [{}]", sql);
+        int result = getNamedParameterJdbcTemplate().update(sql, args);
+        LOG.trace("Updated {} rows", result);
+        log(sql, t);
+        return result;
+    }
+
     private void log(String sql, long startTimeNano) {
         long millis = (System.nanoTime() - startTimeNano) / 1000000L;
 
@@ -86,6 +95,15 @@ public class AbstractDao {
         if (millis > TimeUnit.SECONDS.toMillis(2L)) {
             LOG.debug(millis + " ms:  " + sql);
         }
+    }
+
+    protected <T> List<T> queryWithLimit(String sql, RowMapper<T> rowMapper, List<Object> args, int limit) {
+        long t = System.nanoTime();
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(daoHelper.getDataSource());
+        if (limit > 0) jdbcTemplate.setMaxRows(limit);
+        List<T> result = jdbcTemplate.query(sql, args.stream().toArray(), rowMapper);
+        log(sql, t);
+        return result;
     }
 
     protected <T> List<T> query(String sql, RowMapper<T> rowMapper, Object... args) {

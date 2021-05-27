@@ -34,6 +34,8 @@ import java.util.List;
 public class SearchCommand {
 
     private String query;
+    private int limit;
+    private String orderBy;
     private List<MediaFile> artists;
     private List<MediaFile> albums;
     private List<MediaFile> songs;
@@ -41,6 +43,7 @@ public class SearchCommand {
     private User user;
     private boolean partyModeEnabled;
     private Player player;
+    private String errorMessage;
 
     public String getQuery() {
         return query;
@@ -104,6 +107,30 @@ public class SearchCommand {
 
     public void setPlayer(Player player) {
         this.player = player;
+    }
+
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public int getLimit() {
+        return limit;
+    }
+
+    public void setLimit(int limit) {
+        this.limit = limit;
+    }
+
+    public String getOrderBy() {
+        return orderBy;
+    }
+
+    public void setOrderBy(String orderBy) {
+        this.orderBy = orderBy;
     }
 
     public static class Match {
