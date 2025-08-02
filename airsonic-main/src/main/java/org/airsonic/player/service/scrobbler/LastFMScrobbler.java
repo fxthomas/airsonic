@@ -22,18 +22,22 @@ package org.airsonic.player.service.scrobbler;
 import org.airsonic.player.domain.MediaFile;
 import org.airsonic.player.util.StringUtil;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.ResponseHandler;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.impl.client.BasicResponseHandler;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
+import org.apache.hc.client5.http.BasicHttpConnectionManager;
+import org.apache.hc.client5.http.ClientProtocolException;
+import org.apache.hc.client5.http.ResponseHandler;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.entity.UrlEncodedFormEntity;
+import org.apache.hc.client5.http.impl.classic.BasicResponseHandler;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.BasicNameValuePair;
+import org.apache.hc.core5.http.NameValuePair;
+import org.apache.hc.core5.http.io.SocketConfig;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,10 +61,20 @@ public class LastFMScrobbler {
     private RegistrationThread thread;
     private final LinkedBlockingQueue<RegistrationData> queue = new LinkedBlockingQueue<RegistrationData>();
     private final RequestConfig requestConfig = RequestConfig.custom()
-            .setConnectTimeout(15000)
-            .setSocketTimeout(15000)
+            .setConnectTimeout(Timeout.ofSeconds(15))
             .build();
 
+    private final BasicHttpConnectionManager requestManager = new BasicHttpConnectionManager();
+
+    public LastFMScrobbler() {
+        requestManager.setDefaultSocketConfig(SocketConfig.custom()
+            .setSoTimeout(Timeout.ofSeconds(15))
+            .build());
+        requestManager.setDefaultConnectionConfig(ConnectionConfig.custom()
+            .setConnectTimeout(Timeout.ofSeconds(15))
+            .setSocketTimeout(Timeout.ofSeconds(15))
+            .build());
+    }
 
     /**
      * Registers the given media file at www.last.fm. This method returns immediately, the actual registration is done
@@ -248,7 +262,7 @@ public class LastFMScrobbler {
     }
 
     private String[] executeRequest(HttpUriRequest request) throws ClientProtocolException, IOException {
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
+        try (CloseableHttpClient client = HttpClients.custom().setConnectionManager(requestManager).build()) {
             ResponseHandler<String> responseHandler = new BasicResponseHandler();
             String response = client.execute(request, responseHandler);
             return response.split("\\r?\\n");

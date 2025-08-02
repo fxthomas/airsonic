@@ -19,6 +19,9 @@
  */
 package org.airsonic.player.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.airsonic.player.domain.*;
 import org.airsonic.player.io.RangeOutputStream;
 import org.airsonic.player.service.*;
@@ -35,9 +38,6 @@ import org.springframework.web.bind.ServletRequestUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.LastModified;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

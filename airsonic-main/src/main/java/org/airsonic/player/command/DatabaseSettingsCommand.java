@@ -1,8 +1,8 @@
 package org.airsonic.player.command;
 
-import org.airsonic.player.spring.DataSourceConfigType;
+import jakarta.validation.constraints.NotNull;
 
-import javax.validation.constraints.NotNull;
+import org.airsonic.player.spring.DataSourceConfigType;
 
 public class DatabaseSettingsCommand {
 

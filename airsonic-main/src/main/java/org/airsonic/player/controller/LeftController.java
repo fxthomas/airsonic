@@ -19,6 +19,9 @@
  */
 package org.airsonic.player.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.airsonic.player.domain.*;
 import org.airsonic.player.service.*;
 import org.airsonic.player.service.search.IndexManager;
@@ -31,9 +34,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.support.RequestContextUtils;
-
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 
 import java.io.File;
 import java.util.*;

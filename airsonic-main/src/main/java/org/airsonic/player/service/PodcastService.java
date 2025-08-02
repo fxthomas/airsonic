@@ -34,15 +34,19 @@ import org.airsonic.player.util.StringUtil;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.config.CookieSpecs;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.entity.ContentType;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
+import org.apache.hc.client5.http.BasicHttpConnectionManager;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.cookie.StandardCookieSpec;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpResponse;
+import org.apache.hc.core5.http.io.SocketConfig;
+import org.apache.hc.core5.util.Timeout;
 import org.jdom2.Document;
 import org.jdom2.Element;
 import org.jdom2.Namespace;
@@ -79,6 +83,12 @@ public class PodcastService {
     private static final Namespace[] ITUNES_NAMESPACES = {Namespace.getNamespace("http://www.itunes.com/DTDs/Podcast-1.0.dtd"),
         Namespace.getNamespace("http://www.itunes.com/dtds/podcast-1.0.dtd")};
 
+    private final RequestConfig requestConfig = RequestConfig.custom()
+            .setConnectTimeout(Timeout.ofMinutes(2))
+            .build();
+
+    private final BasicHttpConnectionManager requestManager = new BasicHttpConnectionManager();
+
     private final ExecutorService refreshExecutor;
     private final ExecutorService downloadExecutor;
     private final ScheduledExecutorService scheduledExecutor;
@@ -103,6 +113,14 @@ public class PodcastService {
         refreshExecutor = Executors.newFixedThreadPool(5, threadFactory);
         downloadExecutor = Executors.newFixedThreadPool(3, threadFactory);
         scheduledExecutor = Executors.newSingleThreadScheduledExecutor(threadFactory);
+
+        requestManager.setDefaultSocketConfig(SocketConfig.custom()
+            .setSoTimeout(Timeout.ofMinutes(10))
+            .build());
+        requestManager.setDefaultConnectionConfig(ConnectionConfig.custom()
+            .setConnectTimeout(Timeout.ofMinutes(2))
+            .setSocketTimeout(Timeout.ofMinutes(10))
+            .build());
     }
 
     @PostConstruct
@@ -298,14 +316,10 @@ public class PodcastService {
     private void doRefreshChannel(PodcastChannel channel, boolean downloadEpisodes) {
         InputStream in = null;
 
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
+        try (CloseableHttpClient client = HttpClients.custom().setConnectionManager(requestManager).build()) {
             channel.setStatus(PodcastStatus.DOWNLOADING);
             channel.setErrorMessage(null);
             podcastDao.updateChannel(channel);
-            RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(2 * 60 * 1000) // 2 minutes
-                    .setSocketTimeout(10 * 60 * 1000) // 10 minutes
-                    .build();
             HttpGet method = new HttpGet(channel.getUrl());
             method.setConfig(requestConfig);
 
@@ -346,7 +360,7 @@ public class PodcastService {
     private void downloadImage(PodcastChannel channel) {
         InputStream in = null;
         OutputStream out = null;
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
+        try (CloseableHttpClient client = HttpClients.custom().setConnectionManager(requestManager)) {
             String imageUrl = channel.getImageUrl();
             if (imageUrl == null) {
                 return;
@@ -529,16 +543,15 @@ public class PodcastService {
 
         LOG.info("Starting to download Podcast from " + episode.getUrl());
 
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
+        try (CloseableHttpClient client = HttpClients.custom().setConnectionManager(requestManager)) {
 
             PodcastChannel channel = getChannel(episode.getChannelId());
             RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(2 * 60 * 1000) // 2 minutes
-                    .setSocketTimeout(10 * 60 * 1000) // 10 minutes
+                    .setConnectTimeout(Timeout.ofMinutes(2))
                     // Workaround HttpClient circular redirects, which some feeds use (with query parameters)
                     .setCircularRedirectsAllowed(true)
                     // Workaround HttpClient not understanding latest RFC-compliant cookie 'expires' attributes
-                    .setCookieSpec(CookieSpecs.STANDARD)
+                    .setCookieSpec(StandardCookieSpec.RELAXED)
                     .build();
             HttpGet method = new HttpGet(episode.getUrl());
             method.setConfig(requestConfig);
